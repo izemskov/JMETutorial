@@ -61,6 +61,11 @@ public class HelloAssets extends SimpleApplication {
         DirectionalLight sun = new DirectionalLight();
         sun.setDirection(new Vector3f(-0.1f, -0.7f, -1.0f).normalizeLocal());
         rootNode.addLight(sun);
+       
+        Spatial gameLevel = assetManager.loadModel("Scenes/town/main.j3o");
+        gameLevel.setLocalTranslation(0, -5.2f, 0);
+        gameLevel.setLocalScale(2);
+        rootNode.attachChild(gameLevel);
     }
     
 }
