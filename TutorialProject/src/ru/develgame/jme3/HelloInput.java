@@ -10,6 +10,7 @@ import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.AnalogListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseAxisTrigger;
 import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
@@ -40,6 +41,8 @@ public class HelloInput extends SimpleApplication {
         player.setMaterial(mat);
         rootNode.attachChild(player);
         initKeys(); // load my custom keybinding
+        
+        flyCam.setEnabled(false);
     }
     
     /** Custom Keybinding: Map named actions to inputs. */
@@ -48,10 +51,12 @@ public class HelloInput extends SimpleApplication {
         inputManager.addMapping("Pause",  new KeyTrigger(KeyInput.KEY_P));
         inputManager.addMapping("Left",   new KeyTrigger(KeyInput.KEY_J));
         inputManager.addMapping("Right",  new KeyTrigger(KeyInput.KEY_K));
-        inputManager.addMapping("Up",     new KeyTrigger(KeyInput.KEY_H));
-        inputManager.addMapping("Down",   new KeyTrigger(KeyInput.KEY_L));
+        inputManager.addMapping("Up",     new KeyTrigger(KeyInput.KEY_H),
+                new MouseAxisTrigger(MouseInput.AXIS_WHEEL, true));
+        inputManager.addMapping("Down",   new KeyTrigger(KeyInput.KEY_L),
+                new MouseAxisTrigger(MouseInput.AXIS_WHEEL, false));
         inputManager.addMapping("Rotate", new KeyTrigger(KeyInput.KEY_SPACE),
-                                          new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
+                new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
         /* Add the named mappings to the action listeners. */
         inputManager.addListener(actionListener, "Pause");
         inputManager.addListener(analogListener, "Left", "Right", "Rotate", "Up", "Down");
