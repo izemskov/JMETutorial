@@ -10,12 +10,16 @@ import com.jme3.animation.AnimEventListener;
 import com.jme3.animation.LoopMode;
 import com.jme3.app.SimpleApplication;
 import com.jme3.input.KeyInput;
+import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.DirectionalLight;
+import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
+import com.jme3.scene.debug.SkeletonDebugger;
 
 /**
  *
@@ -23,6 +27,7 @@ import com.jme3.scene.Node;
  */
 public class HelloAnimation extends SimpleApplication implements AnimEventListener {
     private AnimChannel channel;
+    private AnimChannel channel2;
     private AnimControl control;
     Node player;
 
@@ -46,13 +51,25 @@ public class HelloAnimation extends SimpleApplication implements AnimEventListen
         
         control = player.getControl(AnimControl.class);
         control.addListener(this);
+        
         channel = control.createChannel();
         channel.setAnim("stand");
+        
+        channel2 = control.createChannel();
+        channel2.setAnim("stand");
+        
+        SkeletonDebugger skeletonDebug = new SkeletonDebugger("skeleton", control.getSkeleton());
+        Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        mat.setColor("Color", ColorRGBA.Green);
+        mat.getAdditionalRenderState().setDepthTest(false);
+        skeletonDebug.setMaterial(mat);
+        player.attachChild(skeletonDebug);
     }
     
     private void initKeys() {
         inputManager.addMapping("Walk", new KeyTrigger(KeyInput.KEY_SPACE));
-        inputManager.addListener(actionListener, "Walk");
+        inputManager.addMapping("Pull", new MouseButtonTrigger(MouseInput.BUTTON_LEFT) );
+        inputManager.addListener(actionListener, "Walk", "Pull");
     }
     
     private ActionListener actionListener = new ActionListener() {
@@ -61,6 +78,11 @@ public class HelloAnimation extends SimpleApplication implements AnimEventListen
                 if (!channel.getAnimationName().equals("Walk")) {
                     channel.setAnim("Walk", 0.50f);
                     channel.setLoopMode(LoopMode.Loop);
+                }
+            } else if (name.equals("Pull") && !keyPressed) {
+                if (!channel2.getAnimationName().equals("pull")) {
+                    channel2.setAnim("pull", 0.50f);
+                    channel2.setLoopMode(LoopMode.Loop);
                 }
             }
         }
@@ -72,6 +94,12 @@ public class HelloAnimation extends SimpleApplication implements AnimEventListen
             channel.setAnim("stand", 0.50f);
             channel.setLoopMode(LoopMode.DontLoop);
             channel.setSpeed(1f);
+        }
+        
+        if (animName.equals("pull")) {
+            channel2.setAnim("stand", 0.50f);
+            channel2.setLoopMode(LoopMode.DontLoop);
+            channel2.setSpeed(1f);
         }
     }
 
