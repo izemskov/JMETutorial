@@ -5,15 +5,9 @@
 package ru.develgame.protogame;
 
 import com.jme3.ai.agents.Agent;
-import com.jme3.ai.agents.behaviors.npc.SimpleMoveBehavior;
 import com.jme3.ai.agents.behaviors.npc.steering.PursuitBehavior;
+import com.jme3.ai.agents.util.control.MonkeyBrainsAppState;
 import com.jme3.app.SimpleApplication;
-import com.jme3.bullet.BulletAppState;
-import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
-import com.jme3.bullet.collision.shapes.CollisionShape;
-import com.jme3.bullet.control.CharacterControl;
-import com.jme3.bullet.control.RigidBodyControl;
-import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
@@ -24,14 +18,13 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
-import com.jme3.ai.agents.util.control.MonkeyBrainsAppState;
 
 /**
  *
  * @author izemskov
  */
-public class ProtoGame extends SimpleApplication implements ActionListener {
-    private CharacterControl player;
+public class HelloAI2 extends SimpleApplication implements ActionListener {
+
     final private Vector3f walkDirection = new Vector3f();
     private boolean left = false, right = false, up = false, down = false;
     
@@ -40,15 +33,14 @@ public class ProtoGame extends SimpleApplication implements ActionListener {
     final private Vector3f camDir = new Vector3f();
     final private Vector3f camLeft = new Vector3f();
     
+    private Node playerModel;
     private Node enemyModel;
-    private CharacterControl enemy;
-    private Vector3f enemyDir = new Vector3f(0.0f, 0.0f, 1.0f);
     
     //defining game
     private MonkeyBrainsAppState brainsAppState = MonkeyBrainsAppState.getInstance(); 
     
     public static void main(String[] args) {
-        ProtoGame app = new ProtoGame();
+        HelloAI2 app = new HelloAI2();
         AppSettings settings = new AppSettings(true);
         settings.setResolution(1024,768);
         app.setSettings(settings);
@@ -57,11 +49,6 @@ public class ProtoGame extends SimpleApplication implements ActionListener {
 
     @Override
     public void simpleInitApp() {
-        /** Set up Physics */
-        BulletAppState bulletAppState = new BulletAppState();
-        bulletAppState.setDebugEnabled(true);
-        stateManager.attach(bulletAppState);
-        
         viewPort.setBackgroundColor(new ColorRGBA(0.7f, 0.8f, 1f, 1f));
         flyCam.setMoveSpeed(100);
         setUpKeys();
@@ -70,75 +57,45 @@ public class ProtoGame extends SimpleApplication implements ActionListener {
         // We load the scene from the zip file and adjust its size.
         Spatial sceneModel = assetManager.loadModel("Scenes/town/main.j3o");
         sceneModel.setLocalScale(2f);
-
-        // We set up collision detection for the scene by creating a
-        // compound collision shape and a static RigidBodyControl with mass zero.
-        CollisionShape sceneShape = CollisionShapeFactory.createMeshShape(sceneModel);
-        RigidBodyControl landscape = new RigidBodyControl(sceneShape, 0);
-        sceneModel.addControl(landscape);
-
-        // We set up collision detection for the player by creating
-        // a capsule collision shape and a CharacterControl.
-        // The CharacterControl offers extra settings for
-        // size, step height, jumping, falling, and gravity.
-        // We also put the player in its starting position.
-
-        CapsuleCollisionShape capsuleShape = new CapsuleCollisionShape(1.5f, 6f, 1);
-        player = new CharacterControl(capsuleShape, 0.05f);
-        player.setJumpSpeed(20);
-        player.setFallSpeed(30);
-        player.setGravity(30);
-        player.setPhysicsLocation(new Vector3f(0, 10, 0));
+        
+        playerModel = new Node();
         
         enemyModel = (Node) assetManager.loadModel("Models/Oto/OtoOldAnim.j3o");
-        
-        CapsuleCollisionShape capsuleShape2 = new CapsuleCollisionShape(1.5f, 6f, 1);
-        enemy = new CharacterControl(capsuleShape2, 0.05f);
-        enemy.setJumpSpeed(20);
-        enemy.setFallSpeed(30);
-        enemy.setGravity(30);
-        enemy.setPhysicsLocation(new Vector3f(20, 10, 0));
 
         // We attach the scene and the player to the rootnode and the physics space,
         // to make them appear in the game world.
         rootNode.attachChild(sceneModel);
+        rootNode.attachChild(playerModel);
         rootNode.attachChild(enemyModel);
-        bulletAppState.getPhysicsSpace().add(landscape);
-        bulletAppState.getPhysicsSpace().add(player);
-        //bulletAppState.getPhysicsSpace().add(enemy);
-        
-        
         
         
         /////////////
         /////////////
         /////////////
         //defining app
-        brainsAppState.setApp(this);
-
+        Agent playerAgent = new Agent("Player agent", playerModel);
+        
         //initialization of Agents with their names and spatials
-        Agent agent = new Agent("First agent", enemyModel);
+        Agent enemyAgent = new Agent("Enemy agent", enemyModel); 
         //there isn't any method in framework like createAgentSpatial()
         //user is supposed to build his own spatials for game
 
         //adding agent to MonkeyBrainsAppState
-        brainsAppState.addAgent(agent);
+        brainsAppState.addAgent(enemyAgent);
 
         //setting moveSpeed, rotationSpeed, mass..
-        agent.setMoveSpeed(20); 
-        agent.setRotationSpeed(30);
+        enemyAgent.setMoveSpeed(20); 
+        enemyAgent.setRotationSpeed(30);
         //used for steering behaviors in com.jme3.ai.agents.behaviors.npc.steering
-        agent.setMass(40);
-        agent.setMaxForce(3);
+        enemyAgent.setMass(40);
+        enemyAgent.setMaxForce(3);
 
         //creating main behavior
         //agent can have only one behavior but that behavior can contain other behaviors
-        //agent.setMainBehavior(new PursuitBehavior(agent, ));
+        enemyAgent.setMainBehavior(new PursuitBehavior(enemyAgent, playerAgent));
 
         //starting agents
-        brainsAppState.start();
-        
-        
+        brainsAppState.start();   
     }
     
     private void setUpKeys() {
@@ -165,7 +122,7 @@ public class ProtoGame extends SimpleApplication implements ActionListener {
         } else if (binding.equals("Down")) {
             down = value;
         } else if (binding.equals("Jump")) {
-            player.jump();
+            //player.jump();
         }
     }
     
@@ -198,14 +155,10 @@ public class ProtoGame extends SimpleApplication implements ActionListener {
         if (down) {
             walkDirection.addLocal(camDir.negate());
         }
-        player.setWalkDirection(walkDirection);
-        cam.setLocation(player.getPhysicsLocation());
+        playerModel.getLocalTranslation().addLocal(walkDirection);
+        cam.setLocation(playerModel.getLocalTranslation());
         
-//        walkDirection.set(0, 0, 0);
-//        walkDirection.addLocal(enemyDir).multLocal(0.6f);
-//        enemy.setWalkDirection(walkDirection);
-//        enemyModel.setLocalTranslation(enemy.getPhysicsLocation());
-
+        brainsAppState.update(tpf);
         
     }
     
