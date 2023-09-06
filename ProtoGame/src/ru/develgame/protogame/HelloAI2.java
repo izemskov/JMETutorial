@@ -7,7 +7,16 @@ package ru.develgame.protogame;
 import com.jme3.ai.agents.Agent;
 import com.jme3.ai.agents.behaviors.npc.steering.PursuitBehavior;
 import com.jme3.ai.agents.util.control.MonkeyBrainsAppState;
+import com.jme3.animation.AnimChannel;
+import com.jme3.animation.AnimControl;
+import com.jme3.animation.LoopMode;
 import com.jme3.app.SimpleApplication;
+import com.jme3.bullet.BulletAppState;
+import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
+import com.jme3.bullet.collision.shapes.CollisionShape;
+import com.jme3.bullet.control.CharacterControl;
+import com.jme3.bullet.control.RigidBodyControl;
+import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
@@ -24,6 +33,7 @@ import com.jme3.system.AppSettings;
  * @author izemskov
  */
 public class HelloAI2 extends SimpleApplication implements ActionListener {
+    private CharacterControl player;
 
     final private Vector3f walkDirection = new Vector3f();
     private boolean left = false, right = false, up = false, down = false;
@@ -49,18 +59,43 @@ public class HelloAI2 extends SimpleApplication implements ActionListener {
 
     @Override
     public void simpleInitApp() {
+        /** Set up Physics */
+        BulletAppState bulletAppState = new BulletAppState();
+        //bulletAppState.setDebugEnabled(true);
+        stateManager.attach(bulletAppState);
+        
         viewPort.setBackgroundColor(new ColorRGBA(0.7f, 0.8f, 1f, 1f));
         flyCam.setMoveSpeed(100);
         setUpKeys();
         setUpLight();
         
+        /* --- Scene --- */
         // We load the scene from the zip file and adjust its size.
         Spatial sceneModel = assetManager.loadModel("Scenes/town/main.j3o");
         sceneModel.setLocalScale(2f);
         
+        // We set up collision detection for the scene by creating a
+        // compound collision shape and a static RigidBodyControl with mass zero.
+        CollisionShape sceneShape = CollisionShapeFactory.createMeshShape(sceneModel);
+        RigidBodyControl landscape = new RigidBodyControl(sceneShape, 0);
+        sceneModel.addControl(landscape);
+        
+        /* --- Player --- */
         playerModel = new Node();
         
+        CapsuleCollisionShape capsuleShape = new CapsuleCollisionShape(1.5f, 6f, 1);
+        player = new CharacterControl(capsuleShape, 0.05f);
+        player.setJumpSpeed(20);
+        player.setFallSpeed(30);
+        player.setGravity(30);
+        player.setPhysicsLocation(new Vector3f(0, 10, 0));
+        
+        /* --- Enemy --- */
         enemyModel = (Node) assetManager.loadModel("Models/Oto/OtoOldAnim.j3o");
+        AnimControl control = enemyModel.getControl(AnimControl.class);
+        AnimChannel channel = control.createChannel();
+        channel.setAnim("Walk");
+        channel.setLoopMode(LoopMode.Loop);
 
         // We attach the scene and the player to the rootnode and the physics space,
         // to make them appear in the game world.
@@ -68,6 +103,8 @@ public class HelloAI2 extends SimpleApplication implements ActionListener {
         rootNode.attachChild(playerModel);
         rootNode.attachChild(enemyModel);
         
+        bulletAppState.getPhysicsSpace().add(landscape);
+        bulletAppState.getPhysicsSpace().add(player);
         
         /////////////
         /////////////
@@ -122,7 +159,7 @@ public class HelloAI2 extends SimpleApplication implements ActionListener {
         } else if (binding.equals("Down")) {
             down = value;
         } else if (binding.equals("Jump")) {
-            //player.jump();
+            player.jump();
         }
     }
     
@@ -155,8 +192,10 @@ public class HelloAI2 extends SimpleApplication implements ActionListener {
         if (down) {
             walkDirection.addLocal(camDir.negate());
         }
-        playerModel.getLocalTranslation().addLocal(walkDirection);
-        cam.setLocation(playerModel.getLocalTranslation());
+        
+        player.setWalkDirection(walkDirection);
+        cam.setLocation(player.getPhysicsLocation());
+        playerModel.setLocalTranslation(player.getPhysicsLocation());
         
         brainsAppState.update(tpf);
         
